@@ -4,6 +4,7 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Entities
 {
     public enum TaskCriticality
     {
+        NULL,
         Critical,
         Important,
         Mild
