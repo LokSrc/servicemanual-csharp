@@ -1,6 +1,6 @@
 ﻿namespace EtteplanMORE.ServiceManual.ApplicationCore.Entities
 {
-    class ServiceTask
+    public class ServiceTask
     {
         // TODO: params
     }

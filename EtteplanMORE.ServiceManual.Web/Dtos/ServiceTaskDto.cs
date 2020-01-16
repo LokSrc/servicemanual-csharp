@@ -2,6 +2,6 @@
 {
     public class ServiceTaskDto
     {
-        // PARAMS
+        // TODO: params
     }
 }

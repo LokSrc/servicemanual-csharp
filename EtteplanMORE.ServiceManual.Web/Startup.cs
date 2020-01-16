@@ -21,6 +21,7 @@ namespace EtteplanMORE.ServiceManual.Web
         {
             services.AddMvc();
             services.AddScoped<IFactoryDeviceService, FactoryDeviceService>();
+            services.AddScoped<IServiceTaskService, ServiceTaskService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
