@@ -22,6 +22,31 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
             _factoryDeviceService = factoryDeviceService;
         }
 
+        private async Task AddTargets(List<ServiceTaskDto> Tasks)
+        {
+            // Add target object to every task
+            FactoryDevice dev;
+            foreach (ServiceTaskDto task in Tasks)
+            {
+                dev = await _factoryDeviceService.Get(task.TargetId);
+
+                // If target not found. (These tasks should be removed/edited)
+                if (dev == null)
+                {
+                    task.Target = null;
+                    continue;
+                }
+
+                task.Target = new FactoryDeviceDto
+                {
+                    Id = dev.Id,
+                    Name = dev.Name,
+                    Type = dev.Type,
+                    Year = dev.Year
+                };
+            }
+        }
+
         /// <summary>
         ///     List all
         ///     HTTP GET: api/servicetasks/
@@ -42,19 +67,7 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
                     TargetId = st.TargetId
                 }).ToList();
 
-            // Add target object to every task
-            FactoryDevice dev;
-            foreach (ServiceTaskDto task in tasks)
-            {
-                dev = await _factoryDeviceService.Get(task.TargetId);
-                task.Target = new FactoryDeviceDto
-                {
-                    Id = dev.Id,
-                    Name = dev.Name,
-                    Type = dev.Type,
-                    Year = dev.Year
-                };
-            }
+            await AddTargets(tasks);
             return tasks;
         }
 
@@ -76,14 +89,38 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
                 DateIssued = st.DateIssued,
                 Description = st.Description,
                 TargetId = st.TargetId,
-                Target = new FactoryDeviceDto
+                Target = dev != null ? new FactoryDeviceDto
                 {
                     Id = dev.Id,
                     Name = dev.Name,
                     Type = dev.Type,
                     Year = dev.Year
-                }
+                } : null
             });
+        }
+
+        /// <summary>
+        ///     Search with params
+        ///     HTTP GET: /api/servicetasks/search?{PARAMS}
+        /// </summary>
+        /// <param name="SearchData"></param>
+        /// <returns></returns>
+        [HttpGet("search")]
+        public async Task<IEnumerable<ServiceTaskDto>> Get(SearchDto SearchData)
+        {
+            List<ServiceTaskDto> tasks = (await _serviceTaskService.SearchAsync(SearchData))
+                .Select(st => new ServiceTaskDto
+                {
+                    TaskId = st.TaskId,
+                    Closed = st.Closed,
+                    Criticality = st.Criticality,
+                    DateIssued = st.DateIssued,
+                    Description = st.Description,
+                    TargetId = st.TargetId
+                }).ToList();
+
+            await AddTargets(tasks);
+            return tasks;
         }
         
         /// <summary>
@@ -109,12 +146,10 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
             {
                 Closed = task.Closed,
                 Criticality = task.Criticality != 0 ?
-                task.Criticality : TaskCriticality.Mild,
+                task.Criticality : TaskCriticality.Mild, // Default is Mild
                 DateIssued = DateTime.Now,
-                Description = task.Description != "" ? 
-                task.Description : "No description provided.",
-                TargetId = task.TargetId,
-                TaskId = (await _serviceTaskService.GetAllAsync()).Count()
+                Description = task.Description ?? "No description provided.",
+                TargetId = task.TargetId
             };
 
             await _serviceTaskService.CreateAsync(newTask);
@@ -130,7 +165,17 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
         /// <returns></returns>
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(ServiceTaskDto UpdateData, int id)
-        {
+        {   
+            // If TargetId is provided it must be valid
+            if (UpdateData.TargetId != 0)
+            {
+                FactoryDevice dev = await _factoryDeviceService.Get(UpdateData.TargetId);
+                if (dev == null)
+                {
+                    return BadRequest(Json("Provided TargetId is invalid"));
+                }
+            }
+            
             ServiceTask updateData = new ServiceTask
             {
                 Closed = UpdateData.Closed,
@@ -139,9 +184,8 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
                 TargetId = UpdateData.TargetId,
                 TaskId = id
             };
-            await _serviceTaskService.UpdateAsync(updateData);
-
-            return Ok(Json("Edit succesful."));
+            await _serviceTaskService.UpdateAsync(updateData, id);
+            return Ok(Json("Edit successful."));
         }
 
         /// <summary>
@@ -154,36 +198,9 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             await _serviceTaskService.DeleteAsync(id);
-            return Ok(Json("Service task removed."));
+            return Ok(Json($"Service task with id:{id}" +
+                $" is no longer in database"));
         }
 
     }
 }
-
-
-
-/* Default values:
- * TaskId: next open
- * TargetId: is needed always!!!
- * Criticality: critical
- * DateIssued: Current time
- * Description: "No description provided."
- * Closed: false
- */
-
-/* Can be edited
- * TaskId: NO
- * TargetId: Yes
- * Criticality: Yes
- * DateIssued: No
- * Description: Yes
- * Closed: YES NOTE: Not giving this will set it to false
- */
-
-
-// GET /api/servicetasks                LISTAUS // DONE
-// GET /api/servicetasks/target/id      SUODATETTU LISTAUS // DONE
-// GET /api/servicetasks? Params        HAKU // TODO
-// POST /api/servicetasks? Params       LISÄYS // DONE
-// PUT /api/servicetasks/id? Params     MUOKKAUS // DONE, NOT TESTED AT ALL CHECK INPUT ORDER (int id, UpdateData)...
-// DELETE /api/servicetasks/id          POISTO // DONE

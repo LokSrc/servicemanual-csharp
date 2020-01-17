@@ -7,8 +7,16 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Interfaces
 {
     public interface IServiceTaskService
     {
-        Task<IEnumerable<ServiceTask>> GetAll();
+        Task<IEnumerable<ServiceTask>> GetAllAsync();
 
-        Task<ServiceTask> Get(int id);
+        Task<IEnumerable<ServiceTask>> GetAsync(int TargetId);
+
+        Task<IEnumerable<ServiceTask>> SearchAsync(Search SearchData);
+
+        Task<IAsyncResult> DeleteAsync(int TaskId);
+
+        Task<IAsyncResult> UpdateAsync(ServiceTask UpdateData, int TaskId);
+
+        Task<IAsyncResult> CreateAsync(ServiceTask task);
     }
 }
