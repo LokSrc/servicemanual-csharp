@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Data;
+using System.Data.SQLite;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using EtteplanMORE.ServiceManual.ApplicationCore.Entities;
 using EtteplanMORE.ServiceManual.ApplicationCore.Interfaces;
 
@@ -10,42 +13,36 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
 {
     public class FactoryDeviceService : IFactoryDeviceService
     {
-        /// <summary>
-        ///     Remove this. Temporary device storage before proper data storage is implemented.
-        /// </summary>
-        private static readonly ImmutableList<FactoryDevice> TemporaryDevices = new List<FactoryDevice>
-        {
-            new FactoryDevice
-            {
-                Id = 1,
-                Name = "Device X",
-                Year = 2001,
-                Type = "Type 10"
-            },
-            new FactoryDevice
-            {
-                Id = 2,
-                Name = "Device Y",
-                Year = 2012,
-                Type = "Type 3"
-            },
-            new FactoryDevice
-            {
-                Id = 3,
-                Name = "Device Z",
-                Year = 1985,
-                Type = "Type 1"
-            }
-        }.ToImmutableList();
-
         public async Task<IEnumerable<FactoryDevice>> GetAll()
         {
-            return await Task.FromResult(TemporaryDevices);
+            string query = "SELECT * FROM FactoryDevice";
+            return await await Task.FromResult(RunQuery(query));
         }
 
         public async Task<FactoryDevice> Get(int id)
         {
-            return await Task.FromResult(TemporaryDevices.FirstOrDefault(c => c.Id == id));
+            string query = "SELECT * FROM FactoryDevice " +
+                $"WHERE Id = {id};";
+            var output = await RunQuery(query);
+            if (output.Count() > 0)
+            {
+                return output.First();
+            }
+            return null;
+        }
+
+        private async Task<IEnumerable<FactoryDevice>> RunQuery(string query, string db = "SMDB")
+        {
+            using (IDbConnection cnn = new SQLiteConnection(LoadConnectionString(db)))
+            {
+                var output = cnn.Query<FactoryDevice>(query, new DynamicParameters());
+                return await Task.FromResult(output);
+            }
+        }
+
+        private static string LoadConnectionString(string id = "SMDB")
+        {
+            return $"Data Source=.\\{id}.db;Version=3;";
         }
     }
 }
