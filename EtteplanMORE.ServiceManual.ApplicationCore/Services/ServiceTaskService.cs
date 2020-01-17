@@ -138,8 +138,6 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
             query += $"Criticality <= {MinCriticality}";
             query += " ORDER BY Criticality, DateIssued desc;";
 
-            Console.WriteLine(query);
-
             return await await Task.FromResult(RunQuery(query));
         }
 
@@ -171,7 +169,7 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
                 {
                     query += ", ";
                 }
-                query += $"Description = {UpdateData.Description}";
+                query += $"Description = \"{UpdateData.Description}\"";
                 first = false;
 
             }

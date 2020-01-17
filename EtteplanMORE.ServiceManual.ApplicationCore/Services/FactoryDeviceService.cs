@@ -25,6 +25,7 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
             var output = await RunQuery(query);
             if (output.Count() > 0)
             {
+                // There should be only one always
                 return output.First();
             }
             return null;
@@ -39,7 +40,7 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
             }
         }
 
-        private static string LoadConnectionString(string id = "SMDB")
+        private static string LoadConnectionString(string id)
         {
             return $"Data Source=.\\{id}.db;Version=3;";
         }
