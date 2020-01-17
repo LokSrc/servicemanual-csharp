@@ -9,7 +9,7 @@ namespace EtteplanMORE.ServiceManual.UnitTests.ApplicationCore.Services.FactoryD
     public class FactoryDeviceGet
     {
         [Fact]
-        public async void AllCars()
+        public async void AllDevices()
         {
             IFactoryDeviceService factoryDeviceService = new FactoryDeviceService();
 
@@ -17,11 +17,11 @@ namespace EtteplanMORE.ServiceManual.UnitTests.ApplicationCore.Services.FactoryD
 
             Assert.NotNull(fds);
             Assert.NotEmpty(fds);
-            Assert.Equal(3, fds.Count);
+            Assert.Equal(30, fds.Count);
         }
 
         [Fact]
-        public async void ExistingCardWithId()
+        public async void ExistingDeviceWithId()
         {
             IFactoryDeviceService FactoryDeviceService = new FactoryDeviceService();
             int fdId = 1;
@@ -33,10 +33,10 @@ namespace EtteplanMORE.ServiceManual.UnitTests.ApplicationCore.Services.FactoryD
         }
 
         [Fact]
-        public async void NonExistingCardWithId()
+        public async void NonExistingDeviceWithId()
         {
             IFactoryDeviceService FactoryDeviceService = new FactoryDeviceService();
-            int fdId = 4;
+            int fdId = 100;
 
             var fd = await FactoryDeviceService.Get(fdId);
 
