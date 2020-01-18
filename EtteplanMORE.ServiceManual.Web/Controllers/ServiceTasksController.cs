@@ -83,6 +83,12 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
                 return BadRequest(Json("Error: TargetId must be provided."));
             }
 
+            // If Criticality is provided it must be 1,2 or 3
+            if (task.Criticality < 0 || (int)task.Criticality > 3)
+            {
+                return BadRequest(Json("Provided Criticality is invalid"));
+            }
+
             if (await _factoryDeviceService.Get(task.TargetId) == null)
             {
                 return NotFound(Json("Error: Target for task was not found."));
@@ -122,6 +128,12 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
                 }
             }
             
+            // If Criticality is provided it must be 1,2 or 3
+            if (UpdateData.Criticality < 0 || (int)UpdateData.Criticality > 3)
+            {
+                return BadRequest(Json("Provided Criticality is invalid"));
+            }
+
             ServiceTask updateData = new ServiceTask
             {
                 Closed = UpdateData.Closed,
