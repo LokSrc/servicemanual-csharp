@@ -213,4 +213,6 @@ Application core depends on following NuGet packages:
     Dapper
 
 # Security concerns
-Application is currently vulnerable to SQLInjections and user is not authenticated and/or restricted in any way.
+User is not authenticated and/or restricted in any way.
+
+Application is protected against SQLInjection by using DynamicParameters (Dapper).

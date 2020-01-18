@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
+using System.Text;
 using System.Threading.Tasks;
 using Dapper;
 using EtteplanMORE.ServiceManual.ApplicationCore.Entities;
@@ -13,22 +14,32 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
     {
         public async Task<IAsyncResult> CreateAsync(ServiceTask task)
         {
-            string query = "INSERT INTO ServiceTask  " +
-                "(TargetId, Criticality, DateIssued, Description, Closed) " +
-                $"VALUES ({task.TargetId}, {(int)task.Criticality}, \"{FormatDate(task.DateIssued)}\"," +
-                $" \"{task.Description}\", {task.Closed});";
-            return await Task.FromResult(RunQuery(query));
-        }
+            StringBuilder safeQuery = new StringBuilder(@"INSERT INTO ServiceTask (TargetId, Criticality, DateIssued, Description, Closed) VALUES ");
+            safeQuery.Append("(@TargetId, @Criticality, @Date, @Description, @Closed);");
+
+            DynamicParameters dynamicParameters = new DynamicParameters();
+            dynamicParameters.Add("TargetId", task.TargetId);
+            dynamicParameters.Add("Criticality", task.Criticality);
+            dynamicParameters.Add("Date", FormatDate(task.DateIssued));
+            dynamicParameters.Add("Description", task.Description);
+            dynamicParameters.Add("Closed", task.Closed);
+
+            return await Task.FromResult(RunQuerySafe(safeQuery.ToString(), dynamicParameters));
+        } 
 
         public async Task<IAsyncResult> DeleteAsync(int TaskId)
         {
-            string query = "DELETE FROM ServiceTask " +
-                $"WHERE TaskId = {TaskId};";
-            return await Task.FromResult(RunQuery(query));
+            StringBuilder safeQuery = new StringBuilder(@"DELETE FROM ServiceTask WHERE TaskId = @TaskId;");
+
+            DynamicParameters dynamicParameters = new DynamicParameters();
+            dynamicParameters.Add("TaskId", TaskId);
+
+            return await Task.FromResult(RunQuerySafe(safeQuery.ToString(), dynamicParameters));
         }
 
         public async Task<IEnumerable<ServiceTask>> GetAllAsync()
         {
+            // No user input -> we can run this without dynamicparameters
             string query = "SELECT * FROM ServiceTask " +
                 "ORDER BY Criticality, DateIssued desc;";
             return await await Task.FromResult(RunQuery(query));
@@ -36,149 +47,108 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
 
         public async Task<IEnumerable<ServiceTask>> GetAsync(int TargetId)
         {
-            string query = "SELECT * FROM ServiceTask " +
-                $"WHERE TargetId = {TargetId} " +
-                "ORDER BY Criticality, DateIssued desc;";
-            return await await Task.FromResult(RunQuery(query));
+            StringBuilder safeQuery = new StringBuilder(@"SELECT * FROM ServiceTask WHERE TargetId = @TargetId ");
+            safeQuery.Append("ORDER BY Criticality, DateIssued desc;");
+
+            DynamicParameters dynamicParameters = new DynamicParameters();
+            dynamicParameters.Add("TargetId", TargetId);
+
+            return await await Task.FromResult(RunQuerySafe(safeQuery.ToString(), dynamicParameters));
         }
 
         public async Task<IEnumerable<ServiceTask>> SearchAsync(Search SearchData)
         {
-            bool first = true; // To keep track of ' AND ' separators
-            string query = "SELECT * FROM ServiceTask WHERE ";
-            
+            StringBuilder safeQuery = new StringBuilder(@"SELECT * FROM ServiceTask WHERE ");
+            DynamicParameters dynamicParameters = new DynamicParameters();
+
+            // Criticality added always
+            int MinCriticality = SearchData.MinCriticality != 0 ?
+                SearchData.MinCriticality : (int)TaskCriticality.Mild;
+            safeQuery.Append("Criticality <= @MinCriticality ");
+            dynamicParameters.Add("MinCriticality", MinCriticality);
+
             // If TaskId is provided return matching one
             if (SearchData.TaskId != 0)
             {
-                query += $"TaskId = {SearchData.TaskId};";
-                return await await Task.FromResult(RunQuery(query));
+                safeQuery.Append("AND TaskId = @TaskId;");
+                dynamicParameters.Add("TaskId", SearchData.TaskId);
+                return await await Task.FromResult(RunQuerySafe(safeQuery.ToString(), dynamicParameters));
             }
-
-            // Construct query
 
             // Dates
             if (SearchData.IssuedBefore != new DateTime()) // If param is provided
             {
-                query += $"DateIssued < \"{FormatDate(SearchData.IssuedBefore)}\"";
-                first = false;
+                safeQuery.Append("AND DateIssued < @IssuedBefore ");
+                dynamicParameters.Add("IssuedBefore", FormatDate(SearchData.IssuedBefore));
             }
 
             if (SearchData.IssuedAfter != new DateTime()) // If param is provided
             {
-                if (!first)
-                {
-                    query += " AND ";
-                }
-                query += $"DateIssued > \"{FormatDate(SearchData.IssuedAfter)}\"";
-                first = false;
+                safeQuery.Append("AND DateIssued > @IssuedAfter ");
+                dynamicParameters.Add("IssuedAfter", FormatDate(SearchData.IssuedAfter));
             }
 
             // Target
             if (SearchData.TargetId != 0)
             {
-                if (!first)
-                {
-                    query += " AND ";
-                }
-                query += $"TargetId = {SearchData.TargetId}";
-                first = false;
+                safeQuery.Append("AND TargetId = @TargetId ");
+                dynamicParameters.Add("TargetId", SearchData.TargetId);
             }
 
             // Closed
-            if (SearchData.Closed != 0) 
+            if (SearchData.Closed != 0)
             {
-                if (!first)
-                {
-                    query += " AND ";
-                }
-
-                int Closed;
-                if (SearchData.Closed == 1)
-                {
-                    Closed = 1;
-                } else
-                {
-                    Closed = 0;
-                }
-                query += $"Closed = {Closed}";
-                first = false;
+                int Closed = SearchData.Closed == 1 ? 1 : 0;
+                safeQuery.Append("AND Closed = @Closed ");
+                dynamicParameters.Add("Closed", Closed);
             }
 
             // Description contains
-            if (SearchData.DescContains != null) 
+            if (SearchData.DescContains != null)
             {
-                if (!first)
-                {
-                    query += " AND ";
-                }
-                query += $"Description LIKE '%{SearchData.DescContains}%'";
-                first = false;
+                safeQuery.Append("AND Description LIKE @DescContains ");
+                dynamicParameters.Add("DescContains", "%" + SearchData.DescContains + "%");
             }
 
-            // Criticality and order by
-            int MinCriticality;
-            if (SearchData.MinCriticality == 0)
-            {
-                MinCriticality = (int)TaskCriticality.Mild; // All criticalities
-            } else
-            {
-                MinCriticality = SearchData.MinCriticality;
-            }
+            safeQuery.Append("ORDER BY Criticality, DateIssued desc;");
 
-            if (!first)
-            {
-                query += " AND ";
-            }
-            query += $"Criticality <= {MinCriticality}";
-            query += " ORDER BY Criticality, DateIssued desc;";
-
-            return await await Task.FromResult(RunQuery(query));
+            return await await Task.FromResult(RunQuerySafe(safeQuery.ToString(), dynamicParameters));
         }
 
         public async Task<IAsyncResult> UpdateAsync(ServiceTask UpdateData, int TaskId)
         {
-            bool first = true; // To keep track of ',' separators
-
-            // Construct query
-            string query = "UPDATE ServiceTask SET ";
-            if (UpdateData.TargetId != 0)
-            {
-                query += $"TargetId = {UpdateData.TargetId}";
-                first = false;
-            }
-            
-            if (UpdateData.Criticality != 0)
-            {
-                if (!first)
-                {
-                    query += ", ";
-                }
-                query += $"Criticality = {(int)UpdateData.Criticality}";
-                first = false;
-            }
-
-            if (UpdateData.Description != null)
-            {
-                if (!first)
-                {
-                    query += ", ";
-                }
-                query += $"Description = \"{UpdateData.Description}\"";
-                first = false;
-
-            }
-
-            if (!first)
-            {
-                query += ", ";
-            }
+            StringBuilder safeQuery = new StringBuilder(@"UPDATE ServiceTask SET ");
+            DynamicParameters dynamicParameters = new DynamicParameters();
 
             // Closed status is set to false always if true is not provided
-            query += $"Closed = {UpdateData.Closed}";
+            safeQuery.Append("Closed = @Closed");
+            dynamicParameters.Add("Closed", UpdateData.Closed);
 
-            query += $" WHERE TaskId = {TaskId};";
+            // TargetId
+            if (UpdateData.TargetId != 0)
+            {
+                safeQuery.Append(", TargetId = @TargetId");
+                dynamicParameters.Add("TargetId", UpdateData.TargetId);
+            }
+            
+            // Criticality
+            if (UpdateData.Criticality != 0)
+            {
+                safeQuery.Append(", Criticality = @Criticality");
+                dynamicParameters.Add("Criticality", (int)UpdateData.Criticality);
+            }
 
-            return await Task.FromResult(RunQuery(query));
+            // Description
+            if (UpdateData.Description != null)
+            {
+                safeQuery.Append(", Description = @Description");
+                dynamicParameters.Add("Description", UpdateData.Description);
+            }
+
+            safeQuery.Append(" WHERE TaskId = @TaskId;");
+            dynamicParameters.Add("TaskId", TaskId);
+
+            return await Task.FromResult(RunQuerySafe(safeQuery.ToString(), dynamicParameters));
         }
 
         private async Task<IEnumerable<ServiceTask>> RunQuery(string query, string db = "SMDB")
@@ -186,6 +156,22 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
             using (IDbConnection cnn = new SQLiteConnection(LoadConnectionString(db)))
             {
                 var output = cnn.Query<ServiceTask>(query, new DynamicParameters());
+                return await Task.FromResult(output);
+            }
+        }
+
+        /// <summary>
+        ///     Sql injection protected
+        /// </summary>
+        /// <param name="query">query</param>
+        /// <param name="param">query params</param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<ServiceTask>> RunQuerySafe(string query, DynamicParameters dynamicParameters, string db = "SMDB")
+        {
+            using (IDbConnection cnn = new SQLiteConnection(LoadConnectionString(db)))
+            {
+                var output = cnn.Query<ServiceTask>(query, dynamicParameters);
                 return await Task.FromResult(output);
             }
         }
