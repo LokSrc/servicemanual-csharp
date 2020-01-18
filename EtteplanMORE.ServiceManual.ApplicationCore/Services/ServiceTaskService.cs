@@ -13,9 +13,16 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
     {
         public async Task<IAsyncResult> CreateAsync(ServiceTask task)
         {
+            // Date to right format for database.
+            string dateFormatted = task.DateIssued.Year+
+                "-"+task.DateIssued.Month+
+                "-"+task.DateIssued.Day+
+                " "+task.DateIssued.Hour+
+                ":"+task.DateIssued.Minute+
+                ":"+task.DateIssued.Second;
             string query = "INSERT INTO ServiceTask  " +
                 "(TargetId, Criticality, DateIssued, Description, Closed) " +
-                $"VALUES ({task.TargetId}, {(int)task.Criticality}, \"{task.DateIssued.ToString()}\"," +
+                $"VALUES ({task.TargetId}, {(int)task.Criticality}, \"{dateFormatted}\"," +
                 $" \"{task.Description}\", {task.Closed});";
             return await Task.FromResult(RunQuery(query));
         }

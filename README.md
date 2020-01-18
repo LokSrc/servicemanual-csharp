@@ -139,17 +139,39 @@ Postman examples:
 
     PUT http://localhost:50441/api/servicetasks/2?TargetId=1&Criticality=3&Description=Fixed&Closed=True
 
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=2
+
+    -----------------------------------------------------------
+
     Update TaskId 2 with new Criticality(1=Critical) and new Closed status(False)
 
     PUT http://localhost:50441/api/servicetasks/2?Criticality=1
+
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=2
+
+    -----------------------------------------------------------
 
     Update TaskId 3 with new TargetId(1) and new Closed status(True)
 
     PUT http://localhost:50441/api/servicetasks/3?TargetId=1&Closed=True
 
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=3
+
+    -----------------------------------------------------------
+
     Update TaskId 3 with new Closed status(False)
 
     PUT http://localhost:50441/api/servicetasks/3
+
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=3
 
 ## D(elete) ServiceTask
 Route: HTTP __DELETE__: api/servicetasks/{id}
@@ -160,9 +182,25 @@ Postman examples:
 
     DELETE http://localhost:50441/api/servicetasks/3
 
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=3
+
+    -----------------------------------------------------------
+
     DELETE http://localhost:50441/api/servicetasks/2
 
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=2
+
+    -----------------------------------------------------------
+
     DELETE http://localhost:50441/api/servicetasks/1
+
+    Check with get all or following
+
+    GET http://localhost:50441/api/servicetasks/search?TaskId=1
 
 # UnitTests
 There are small amount of UnitTests included for FactoryDeviceService and ServiceTaskService. There is no function for resetting database though so you need to grab a fresh SMDB.db file from [SQL](/SQL) folder and place it to [UnitTest](/EtteplanMORE.ServiceManual.UnitTests) folder everytime you want to re-run tests.
