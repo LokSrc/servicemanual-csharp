@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EtteplanMORE.ServiceManual.Web.Controllers
 {
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class FactoryDevicesController : Controller
     {
         private readonly IFactoryDeviceService _factoryDeviceService;
@@ -25,14 +26,7 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
         public async Task<IEnumerable<FactoryDeviceDto>> Get()
         {
             return (await _factoryDeviceService.GetAll())
-                .Select(fd => 
-                    new FactoryDeviceDto {
-                        Id = fd.Id,
-                        Name = fd.Name,
-                        Year = fd.Year,
-                        Type = fd.Type
-                    }
-                );
+                .Select(fd => FormFactoryDevDto(fd));
         }
 
         /// <summary>
@@ -47,13 +41,23 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
                 return NotFound();
             }
 
-            return Ok(new FactoryDeviceDto
+            return Ok(FormFactoryDevDto(fd));
+        }
+        
+        /// <summary>
+        ///     Forms Dto object for FactoryDevice
+        /// </summary>
+        /// <param name="fd">FactoryDevice</param>
+        /// <returns></returns>
+        private static FactoryDeviceDto FormFactoryDevDto(FactoryDevice fd)
+        {
+            return new FactoryDeviceDto
             {
                 Id = fd.Id,
                 Name = fd.Name,
                 Year = fd.Year,
                 Type = fd.Type
-            });
+            };
         }
     }
 }

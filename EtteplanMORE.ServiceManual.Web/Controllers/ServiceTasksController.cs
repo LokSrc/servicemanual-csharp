@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EtteplanMORE.ServiceManual.Web.Controllers
 {
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class ServiceTasksController : Controller
     {
 
@@ -22,31 +23,6 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
             _factoryDeviceService = factoryDeviceService;
         }
 
-        private async Task AddTargets(List<ServiceTaskDto> Tasks)
-        {
-            // Add target object to every task
-            FactoryDevice dev;
-            foreach (ServiceTaskDto task in Tasks)
-            {
-                dev = await _factoryDeviceService.Get(task.TargetId);
-
-                // If target not found. (These tasks should be removed/edited)
-                if (dev == null)
-                {
-                    task.Target = null;
-                    continue;
-                }
-
-                task.Target = new FactoryDeviceDto
-                {
-                    Id = dev.Id,
-                    Name = dev.Name,
-                    Type = dev.Type,
-                    Year = dev.Year
-                };
-            }
-        }
-
         /// <summary>
         ///     List all
         ///     HTTP GET: api/servicetasks/
@@ -57,15 +33,7 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
         {
              // List all tasks 
              List<ServiceTaskDto> tasks = (await _serviceTaskService.GetAllAsync())
-                .Select(st => new ServiceTaskDto
-                {
-                    TaskId = st.TaskId,
-                    Closed = st.Closed,
-                    Criticality = st.Criticality,
-                    DateIssued = st.DateIssued,
-                    Description = st.Description,
-                    TargetId = st.TargetId
-                }).ToList();
+                .Select(st => FormTaskDto(st)).ToList();
 
             await AddTargets(tasks);
             return tasks;
@@ -78,25 +46,11 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
         [HttpGet("target/{id}")]
         public async Task<IEnumerable<ServiceTaskDto>> Get(int id)
         {
-            // Target object for response
-            FactoryDevice dev = await _factoryDeviceService.Get(id);
-            return (await _serviceTaskService.GetAsync(id))
-                .Select(st => new ServiceTaskDto
-            {
-                TaskId = st.TaskId,
-                Closed = st.Closed,
-                Criticality = st.Criticality,
-                DateIssued = st.DateIssued,
-                Description = st.Description,
-                TargetId = st.TargetId,
-                Target = dev != null ? new FactoryDeviceDto
-                {
-                    Id = dev.Id,
-                    Name = dev.Name,
-                    Type = dev.Type,
-                    Year = dev.Year
-                } : null
-            });
+            List<ServiceTaskDto> tasks = (await _serviceTaskService.GetAsync(id))
+                .Select(st => FormTaskDto(st)).ToList();
+
+            await AddTargets(tasks);
+            return tasks;
         }
 
         /// <summary>
@@ -109,15 +63,7 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
         public async Task<IEnumerable<ServiceTaskDto>> Get(SearchDto SearchData)
         {
             List<ServiceTaskDto> tasks = (await _serviceTaskService.SearchAsync(SearchData))
-                .Select(st => new ServiceTaskDto
-                {
-                    TaskId = st.TaskId,
-                    Closed = st.Closed,
-                    Criticality = st.Criticality,
-                    DateIssued = st.DateIssued,
-                    Description = st.Description,
-                    TargetId = st.TargetId
-                }).ToList();
+                .Select(st => FormTaskDto(st)).ToList();
 
             await AddTargets(tasks);
             return tasks;
@@ -200,6 +146,54 @@ namespace EtteplanMORE.ServiceManual.Web.Controllers
             await _serviceTaskService.DeleteAsync(id);
             return Ok(Json($"Service task with id:{id}" +
                 $" is no longer in database"));
+        }
+
+        /// <summary>
+        ///     Add target objects to tasks to improve response
+        /// </summary>
+        /// <param name="Tasks"></param>
+        /// <returns></returns>
+        private async Task AddTargets(List<ServiceTaskDto> Tasks)
+        {
+            // Add target object to every task
+            FactoryDevice dev;
+            foreach (ServiceTaskDto task in Tasks)
+            {
+                dev = await _factoryDeviceService.Get(task.TargetId);
+
+                // If target not found. (These tasks should be removed/edited)
+                if (dev == null)
+                {
+                    task.Target = null;
+                    continue;
+                }
+
+                task.Target = new FactoryDeviceDto
+                {
+                    Id = dev.Id,
+                    Name = dev.Name,
+                    Type = dev.Type,
+                    Year = dev.Year
+                };
+            }
+        }
+
+        /// <summary>
+        ///     Forms Dto object for ServiceTask
+        /// </summary>
+        /// <param name="st">ServiceTask</param>
+        /// <returns></returns>
+        private static ServiceTaskDto FormTaskDto(ServiceTask st)
+        {
+            return new ServiceTaskDto
+            {
+                TaskId = st.TaskId,
+                Closed = st.Closed,
+                Criticality = st.Criticality,
+                DateIssued = st.DateIssued,
+                Description = st.Description,
+                TargetId = st.TargetId
+            };
         }
 
     }

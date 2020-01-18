@@ -13,16 +13,9 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
     {
         public async Task<IAsyncResult> CreateAsync(ServiceTask task)
         {
-            // Date to right format for database.
-            string dateFormatted = task.DateIssued.Year+
-                "-"+task.DateIssued.Month+
-                "-"+task.DateIssued.Day+
-                " "+task.DateIssued.Hour+
-                ":"+task.DateIssued.Minute+
-                ":"+task.DateIssued.Second;
             string query = "INSERT INTO ServiceTask  " +
                 "(TargetId, Criticality, DateIssued, Description, Closed) " +
-                $"VALUES ({task.TargetId}, {(int)task.Criticality}, \"{dateFormatted}\"," +
+                $"VALUES ({task.TargetId}, {(int)task.Criticality}, \"{FormatDate(task.DateIssued)}\"," +
                 $" \"{task.Description}\", {task.Closed});";
             return await Task.FromResult(RunQuery(query));
         }
@@ -66,10 +59,7 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
             // Dates
             if (SearchData.IssuedBefore != new DateTime()) // If param is provided
             {
-                string dateFormatted = SearchData.IssuedBefore.Year + "-" +
-                    SearchData.IssuedBefore.Month + "-" +
-                    SearchData.IssuedBefore.Day;
-                query += $"DateIssued < \"{dateFormatted}\"";
+                query += $"DateIssued < \"{FormatDate(SearchData.IssuedBefore)}\"";
                 first = false;
             }
 
@@ -79,10 +69,7 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
                 {
                     query += " AND ";
                 }
-                string dateFormatted = SearchData.IssuedAfter.Year + "-" +
-                    SearchData.IssuedAfter.Month + "-" +
-                    SearchData.IssuedAfter.Day;
-                query += $"DateIssued > \"{dateFormatted}\"";
+                query += $"DateIssued > \"{FormatDate(SearchData.IssuedAfter)}\"";
                 first = false;
             }
 
@@ -206,6 +193,12 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
         private static string LoadConnectionString(string id)
         {
             return $"Data Source=.\\{id}.db;Version=3;";
+        }
+
+        private static string FormatDate(DateTime date)
+        {
+            // Date to right format for database.
+            return date.ToString("yyyy-MM-dd HH:mm:ss");
         }
     }
 }

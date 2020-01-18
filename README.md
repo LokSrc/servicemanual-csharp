@@ -203,7 +203,7 @@ Postman examples:
     GET http://localhost:50441/api/servicetasks/search?TaskId=1
 
 # UnitTests
-There are small amount of UnitTests included for FactoryDeviceService and ServiceTaskService. There is no function for resetting database though so you need to grab a fresh SMDB.db file from [SQL](/SQL) folder and place it to [UnitTest](/EtteplanMORE.ServiceManual.UnitTests) folder everytime you want to re-run tests.
+There are small amount of UnitTests included for FactoryDeviceService and ServiceTaskService. There is no function for resetting database though so you should re-compile UnitTests if you want to re-run them. If something goes wrong with database you can grab a fresh SMDB.db file from [SQL](/SQL) folder and place it to [UnitTest](/EtteplanMORE.ServiceManual.UnitTests) folder.
 
 # Dependencies
 Application core depends on following NuGet packages:
